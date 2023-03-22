@@ -29,7 +29,7 @@ def load_std_dict():
                 #se possui mais de 10% das linhas preenchidas
                 if (float(len(dataset_no_null) / df_lines) > 0.1):
                     #guarda um "no info", apenas para modelo
-                    std_dict[key] = 0
+                    std_dict[key] = 'no-info'
             #se esta coluna não guarda strings
             else:
                 #se for inteiro 1, 0, guarda 0 como padrão da coluna
@@ -84,14 +84,13 @@ def inconsistencies():
                   'light_yellow', 'orange', 'cloudy']
     index = 0
 
-    #Altera todas as strings para os valores dentro fora. ignora números e o patient ID
+    #Altera strings para valores trabalháveis. ignora números e o patient ID
     for patient in dataset:
         patient_to_override = patient
         for key, value in patient.items():
             if type(std_dict[key]) == str and key != 'Patient ID':
                 if value not in word_range:
-                    if value in ["Ausente", "absent", "no-info", 
-                                 "No-info-at-all", "not_detected", "negative"]:
+                    if value in ["Ausente", "absent", "not_detected", "negative", "no-info"]:
                         patient_to_override[key] = 0
                         dataset[index] = patient_to_override
                     elif value in ["positive", "detected", "present"]:
@@ -118,10 +117,10 @@ def detect_outliers(data):
 def remove_outliers():
     for key in dataset[0].keys():
         try:
-            float(dataset[0][key])
+            float(dataset[1][key])
         except:
             continue
-        if (std_dict[key] != str and key != 'Patient ID'):
+        if (type(std_dict[key]) != str and key != 'Patient ID'):
             data = [float(d[key]) for d in dataset]
             data_file = pandas.DataFrame(data)
             outliers = detect_outliers(data_file).dropna()
