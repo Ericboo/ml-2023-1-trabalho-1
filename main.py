@@ -29,11 +29,15 @@ def load_std_dict():
                 #se possui mais de 10% das linhas preenchidas
                 if (float(len(dataset_no_null) / df_lines) > 0.1):
                     #guarda um "no info", apenas para modelo
-                    std_dict[key] = 'no-info'
+                    std_dict[key] = 0
             #se esta coluna não guarda strings
             else:
-                #guarda a média dos valores desta coluna
-                std_dict[key] = '{0:.10f}'.format(np.mean(dataset_no_null))
+                #se for inteiro 1, 0, guarda 0 como padrão da coluna
+                if mode(dataset_no_null) in [1, 0]:
+                    std_dict[key] = 0
+                #se não, guarda a média dos valores desta coluna
+                else:
+                    std_dict[key] = '{0:.10f}'.format(np.mean(dataset_no_null))
     print("ok")
     return std_dict
 
@@ -73,33 +77,33 @@ def missing_data():
             data.pop(item, None)
     print("ok")
 
-#Lida com valores inconsistentes
+#Lida com valores inconsistentes e remove identificadores para falta de dados.
 def inconsistencies():
-    #Range de palavras que são aceitas no dataset
-    word_range = ['negative', 'absent','positive', 
-                  'detected', 'not_detected', 'no-info', 
-                  'No-info-at-all', 'yellow', 'clear', 'normal',
-                  'light_yellow', 'orange', 'cloudy', 'present']
+    #Range de palavras que são ignoradas no tratamento do dataset
+    word_range = ['yellow', 'clear', 'normal',
+                  'light_yellow', 'orange', 'cloudy']
     index = 0
 
-    #Altera todas as strings para os valores dentro do range. ignora floats
+    #Altera todas as strings para os valores dentro fora. ignora números e o patient ID
     for patient in dataset:
         patient_to_override = patient
-        index += 1
         for key, value in patient.items():
             if type(std_dict[key]) == str and key != 'Patient ID':
                 if value not in word_range:
-                    if value == "Ausentes":
-                        patient_to_override[key] = "absent"
+                    if value in ["Ausente", "absent", "no-info", 
+                                 "No-info-at-all", "not_detected", "negative"]:
+                        patient_to_override[key] = 0
                         dataset[index] = patient_to_override
-                    elif value == "not_done" or value == "Não Realizado":
-                        patient_to_override[key] = "no-info"
+                    elif value in ["positive", "detected", "present"]:
+                        patient_to_override[key] = 1
                         dataset[index] = patient_to_override
                     else:
                         try:
                             float(value)
                         except:
+                            #valores sem tratamento que sobraram.
                             print(value)    
+        index += 1
     print("ok")
 
 #Detecta os outliers usando funções do pandas                
@@ -130,6 +134,7 @@ def remove_outliers():
 
 print("Lidando com dados faltantes...", end = "")
 missing_data()
+
 print("Removendo inconsistências...", end='')
 inconsistencies()
 
